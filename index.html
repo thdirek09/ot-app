@@ -50,10 +50,10 @@ async function fetchRecs() {
   const r = await fetch(`${API_URL}?sort[0][field]=submittedAt&sort[0][direction]=desc`,{headers:HEADS});
   const d = await r.json();
   if(!r.ok) throw new Error(d.error?.message||"โหลดไม่สำเร็จ");
-  return d.records.map(r=>({airtableId:r.id,...r.fields}));
+  return d.records.map(r=>({airtableId:r.id,...r.fields, id:r.fields.otId}));
 }
 async function createRec(rec) {
-  const r = await fetch(API_URL,{method:"POST",headers:HEADS,body:JSON.stringify({fields:{id:rec.id,name:rec.name,empId:rec.empId,department:rec.department,otDate:rec.otDate,startTime:rec.startTime,endTime:rec.endTime,hours:parseFloat(rec.hours),reason:rec.reason,status:"pending",submittedAt:rec.submittedAt}})});
+  const r = await fetch(API_URL,{method:"POST",headers:HEADS,body:JSON.stringify({fields:{otId:rec.id,name:rec.name,empId:rec.empId,department:rec.department,otDate:rec.otDate,startTime:rec.startTime,endTime:rec.endTime,hours:parseFloat(rec.hours),reason:rec.reason,status:"pending",submittedAt:rec.submittedAt}})});
   const d = await r.json();
   if(!r.ok) throw new Error(d.error?.message||"บันทึกไม่สำเร็จ");
   return {airtableId:d.id,...d.fields};
