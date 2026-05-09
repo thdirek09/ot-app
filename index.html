@@ -53,7 +53,7 @@ async function fetchRecs() {
   return d.records.map(r=>({airtableId:r.id,...r.fields}));
 }
 async function createRec(rec) {
-  const r = await fetch(API_URL,{method:"POST",headers:HEADS,body:JSON.stringify({fields:{id:rec.id,name:rec.name,empId:rec.empId,department:rec.department,otDate:rec.otDate,startTime:rec.startTime,endTime:rec.endTime,hours:parseFloat(rec.hours),reason:rec.reason,status:"pending",submittedAt:rec.submittedAt}})});
+  const r = await fetch(API_URL,{method:"POST",headers:HEADS,body:JSON.stringify({fields:{refId:rec.id,name:rec.name,empId:rec.empId,department:rec.department,otDate:rec.otDate,startTime:rec.startTime,endTime:rec.endTime,hours:parseFloat(rec.hours),reason:rec.reason,status:"pending",submittedAt:rec.submittedAt}})});
   const d = await r.json();
   if(!r.ok) throw new Error(d.error?.message||"บันทึกไม่สำเร็จ");
   return {airtableId:d.id,...d.fields};
