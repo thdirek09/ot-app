@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ระบบบันทึก OT</title>
+<title>ระบบบันทึก OT - GKN Driveline</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -11,10 +11,21 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Sarabun','Noto Sans Thai',sans-serif;background:#F0F4F8;min-height:100vh}
 @keyframes spin{to{transform:rotate(360deg)}}
+@media print {
+  body > *:not(#ot-print-form) { display: none !important; }
+  #ot-print-form { display: block !important; position: static !important; }
+}
+#ot-print-form { display: none; }
 </style>
 </head>
 <body>
+
+<div id="ot-print-form">
+  <div id="ot-print-content"></div>
+</div>
+
 <div id="root"></div>
+
 <script type="text/babel">
 const AIRTABLE_TOKEN = "patqYZRhaxaKOWb0C.561295c72835bbe6d6fbc3f42ee8030b2c7e89c97fa6a5565fc6f910053eb7b2";
 const BASE_ID = "appNc3QuqcZOjR6wz";
@@ -28,9 +39,12 @@ const SC = {
   approved:{label:"อนุมัติแล้ว",bg:"#D1FAE5",color:"#065F46",dot:"#10B981"},
   rejected:{label:"ไม่อนุมัติ",bg:"#FEE2E2",color:"#991B1B",dot:"#EF4444"},
 };
+
 const genId = () => "OT-" + Date.now().toString(36).toUpperCase();
 const fmtDate = iso => iso ? new Date(iso).toLocaleDateString("th-TH",{day:"2-digit",month:"short",year:"numeric"}) : "-";
+const fmtDateEN = iso => { if(!iso) return "-"; return new Date(iso).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}); };
 const fmtDT = iso => { if(!iso) return "-"; const d=new Date(iso); return d.toLocaleDateString("th-TH",{day:"2-digit",month:"short",year:"numeric"})+" "+d.toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"}); };
+const today = () => new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
 
 async function fetchRecs() {
   const r = await fetch(`${API_URL}?sort[0][field]=submittedAt&sort[0][direction]=desc`,{headers:HEADS});
@@ -51,19 +65,143 @@ async function updateRec(aid,status,adminNote) {
   return {airtableId:d.id,...d.fields};
 }
 
+function printOTForm(rec) {
+  const td = (content,style="") => `<td style="border:1px solid #000;padding:3px 5px;text-align:center;vertical-align:middle;font-size:9px;${style}">${content}</td>`;
+  const emptyRow = () => `<tr style="height:36px;">${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("","")}${td("")}${td("")}${td("")}</tr>`;
+
+  const html = `
+  <div style="font-family:Arial,sans-serif;padding:15px 20px;max-width:780px;margin:0 auto;">
+    <table style="width:100%;border-collapse:collapse;margin-bottom:6px;">
+      <tr>
+        <td style="width:170px;border:none;vertical-align:middle;padding:4px 0;">
+          <div style="font-size:13px;font-weight:900;letter-spacing:1px;color:#222;">
+            &lt;&lt;&lt; &gt;&gt;&gt;<br>
+            <span style="font-size:10px;">GKN DRIVELINE</span>
+          </div>
+        </td>
+        <td style="border:none;text-align:center;vertical-align:middle;">
+          <div style="font-size:17px;font-weight:bold;">Request for Over Time</div>
+        </td>
+        <td style="width:190px;border:1px solid #000;text-align:center;padding:6px;vertical-align:middle;">
+          <div style="font-size:8px;margin-bottom:4px;">Standard Number</div>
+          <div style="font-weight:bold;font-size:11px;border-top:1px solid #000;padding-top:4px;">HRM-01-001</div>
+        </td>
+      </tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:4px;">
+      <tr>
+        <td style="border:none;font-size:10px;padding:2px 0;"><b>Department:</b> ${rec.department||"-"}</td>
+        <td style="border:none;font-size:10px;text-align:right;padding:2px 0;"><b>Date:</b> ${today()}</td>
+      </tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+      <tr>
+        <td style="border:none;font-size:10px;padding:2px 0;">
+          <span style="border:1px solid #000;display:inline-block;width:11px;height:11px;text-align:center;font-size:8px;line-height:11px;margin-right:3px;">&#10003;</span> OT on Working day
+          &nbsp;&nbsp;
+          <span style="border:1px solid #000;display:inline-block;width:11px;height:11px;margin-right:3px;">&nbsp;</span> Working on Holiday
+          &nbsp;&nbsp;
+          <span style="border:1px solid #000;display:inline-block;width:11px;height:11px;margin-right:3px;">&nbsp;</span> OT on Holiday
+        </td>
+      </tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;font-size:9px;">
+      <thead>
+        <tr>
+          <td rowspan="3" style="border:1px solid #000;text-align:center;padding:3px;font-weight:bold;vertical-align:middle;">I.D.<br>Code</td>
+          <td rowspan="3" style="border:1px solid #000;text-align:center;padding:3px;font-weight:bold;vertical-align:middle;">Name</td>
+          <td rowspan="3" style="border:1px solid #000;text-align:center;padding:3px;font-weight:bold;vertical-align:middle;font-size:8px;">Accepted<br>by<br>Employee</td>
+          <td rowspan="3" style="border:1px solid #000;text-align:center;padding:3px;font-weight:bold;vertical-align:middle;font-size:8px;">Total Weekly<br>hr before<br>this period</td>
+          <td colspan="4" style="border:1px solid #000;text-align:center;padding:3px;font-weight:bold;">Period required (OT)</td>
+          <td colspan="4" style="border:1px solid #000;text-align:center;padding:3px;font-weight:bold;">Normal Working Time</td>
+          <td rowspan="3" style="border:1px solid #000;text-align:center;padding:3px;font-weight:bold;font-size:8px;">Total OT<br>hr include<br>this period</td>
+          <td rowspan="3" style="border:1px solid #000;text-align:center;padding:3px;font-weight:bold;vertical-align:middle;min-width:120px;">Reason</td>
+          <td rowspan="3" style="border:1px solid #000;text-align:center;padding:3px;font-weight:bold;font-size:8px;">For HR<br>Dept.only</td>
+          <td colspan="2" style="border:1px solid #000;text-align:center;padding:3px;font-weight:bold;font-size:8px;">Approve<br>(please tick)</td>
+        </tr>
+        <tr>
+          <td rowspan="2" style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;">Date</td>
+          <td colspan="2" style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;">Time</td>
+          <td rowspan="2" style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;font-size:8px;">Total OT<br>hr</td>
+          <td rowspan="2" style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;">Date</td>
+          <td colspan="2" style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;">Time</td>
+          <td rowspan="2" style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;font-size:8px;">Total hr<br>include<br>this period</td>
+          <td rowspan="2" style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;">Dept.<br>Mgr.</td>
+          <td rowspan="2" style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;">HR<br>Mgr.</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;">From</td>
+          <td style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;">To</td>
+          <td style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;">From</td>
+          <td style="border:1px solid #000;text-align:center;padding:2px;font-weight:bold;">To</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="height:45px;">
+          ${td(rec.empId||"-")}
+          ${td(rec.name||"-","text-align:left;")}
+          ${td("")}
+          ${td("0")}
+          ${td(fmtDateEN(rec.otDate))}
+          ${td(rec.startTime||"-")}
+          ${td(rec.endTime||"-")}
+          ${td(rec.hours||"-")}
+          ${td(fmtDateEN(rec.otDate))}
+          ${td("08.00")}
+          ${td("17.00")}
+          ${td(rec.hours||"-")}
+          ${td(rec.hours||"-")}
+          ${td(rec.reason||"-","text-align:left;font-size:8px;")}
+          ${td("")}
+          ${td("/")}
+          ${td("/")}
+        </tr>
+        ${emptyRow()}
+        ${emptyRow()}
+        ${emptyRow()}
+      </tbody>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;">
+      <tr>
+        <td style="border:none;font-size:8px;color:#888;">Ref: ${rec.id||""} | Date: ${today()}</td>
+      </tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin-top:24px;">
+      <tr>
+        <td style="border:none;text-align:center;width:33%;font-size:9px;padding:0 10px;">
+          <div style="border-bottom:1px solid #000;height:30px;margin-bottom:4px;"></div>
+          Employee Signature
+        </td>
+        <td style="border:none;text-align:center;width:33%;font-size:9px;padding:0 10px;">
+          <div style="border-bottom:1px solid #000;height:30px;margin-bottom:4px;"></div>
+          Department Manager
+        </td>
+        <td style="border:none;text-align:center;width:33%;font-size:9px;padding:0 10px;">
+          <div style="border-bottom:1px solid #000;height:30px;margin-bottom:4px;"></div>
+          HR Manager
+        </td>
+      </tr>
+    </table>
+  </div>`;
+
+  document.getElementById('ot-print-content').innerHTML = html;
+  document.getElementById('ot-print-form').style.display = 'block';
+  window.print();
+  setTimeout(()=>{ document.getElementById('ot-print-form').style.display = 'none'; }, 1500);
+}
+
 const { useState, useEffect } = React;
 
 function Badge({status}) {
   const c = SC[status]||SC.pending;
   return <span style={{background:c.bg,color:c.color,borderRadius:20,padding:"3px 12px",fontSize:12,fontWeight:600,display:"inline-flex",alignItems:"center",gap:5}}>
-    <span style={{width:7,height:7,borderRadius:"50%",background:c.dot,display:"inline-block"}}/>
-    {c.label}
+    <span style={{width:7,height:7,borderRadius:"50%",background:c.dot,display:"inline-block"}}/>{c.label}
   </span>;
 }
 
 function Modal({children,onClose}) {
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:480,boxShadow:"0 20px 60px rgba(0,0,0,0.2)",maxHeight:"90vh",overflowY:"auto"}}>
+    <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:520,boxShadow:"0 20px 60px rgba(0,0,0,0.2)",maxHeight:"90vh",overflowY:"auto"}}>
       {children}
     </div>
   </div>;
@@ -75,56 +213,77 @@ function Spinner() {
   </div>;
 }
 
+function PreviewModal({form,onConfirm,onEdit,loading}) {
+  return <Modal onClose={onEdit}>
+    <h3 style={{margin:"0 0 16px",fontSize:17,color:"#111827",fontWeight:700}}>📋 ตรวจสอบข้อมูลก่อนส่ง</h3>
+    <div style={{background:"#F9FAFB",borderRadius:10,padding:16,marginBottom:16}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 20px"}}>
+        {[["ชื่อ-นามสกุล",form.name],["รหัสพนักงาน",form.empId],["แผนก",form.department],["วันที่ OT",form.otDate],["เวลาเริ่ม",form.startTime],["เวลาสิ้นสุด",form.endTime],["จำนวนชั่วโมง",form.hours?`${form.hours} ชม.`:""]].map(([k,v])=>(
+          <div key={k}>
+            <div style={{fontSize:11,color:"#9CA3AF",fontWeight:600}}>{k}</div>
+            <div style={{fontSize:14,fontWeight:600,color:"#111827"}}>{v||"-"}</div>
+          </div>
+        ))}
+        <div style={{gridColumn:"1/-1"}}>
+          <div style={{fontSize:11,color:"#9CA3AF",fontWeight:600}}>เหตุผลการทำ OT</div>
+          <div style={{fontSize:14,color:"#374151"}}>{form.reason||"-"}</div>
+        </div>
+      </div>
+    </div>
+    <div style={{display:"flex",gap:8}}>
+      <button onClick={onEdit} style={{flex:1,background:"#F3F4F6",color:"#374151",border:"none",borderRadius:8,padding:"11px",fontSize:14,fontWeight:600,cursor:"pointer"}}>✏️ แก้ไข</button>
+      <button onClick={onConfirm} disabled={loading} style={{flex:1,background:loading?"#9CA3AF":"linear-gradient(135deg,#0F766E,#0D9488)",color:"#fff",border:"none",borderRadius:8,padding:"11px",fontSize:14,fontWeight:700,cursor:loading?"not-allowed":"pointer"}}>
+        {loading?"⏳ กำลังส่ง...":"✅ ยืนยันส่งคำขอ"}
+      </button>
+    </div>
+  </Modal>;
+}
+
 function EmployeeForm({onSubmit}) {
   const empty={name:"",empId:"",department:"",otDate:"",startTime:"",endTime:"",hours:"",reason:""};
   const [form,setForm]=useState(empty);
+  const [showPreview,setShowPreview]=useState(false);
   const [success,setSuccess]=useState(false);
-  const [refId,setRefId]=useState("");
+  const [submittedRec,setSubmittedRec]=useState(null);
   const [error,setError]=useState("");
   const [loading,setLoading]=useState(false);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
-  const calcH=(s,e)=>{
-    if(!s||!e) return "";
-    const [sh,sm]=s.split(":").map(Number);
-    const [eh,em]=e.split(":").map(Number);
-    const m=(eh*60+em)-(sh*60+sm);
-    return m<=0?"":(m/60).toFixed(1);
-  };
-  const handleTime=(k,v)=>{
-    const upd={...form,[k]:v};
-    const h=calcH(k==="startTime"?v:form.startTime,k==="endTime"?v:form.endTime);
-    setForm({...upd,hours:h});
-  };
-  const handleSubmit=async()=>{
+  const calcH=(s,e)=>{if(!s||!e)return"";const[sh,sm]=s.split(":").map(Number);const[eh,em]=e.split(":").map(Number);const m=(eh*60+em)-(sh*60+sm);return m<=0?"":(m/60).toFixed(1);};
+  const handleTime=(k,v)=>{const upd={...form,[k]:v};const h=calcH(k==="startTime"?v:form.startTime,k==="endTime"?v:form.endTime);setForm({...upd,hours:h});};
+  const handlePreview=()=>{
     if(!form.name||!form.empId||!form.department||!form.otDate||!form.startTime||!form.endTime||!form.reason){setError("กรุณากรอกข้อมูลให้ครบทุกช่อง");return;}
     if(!form.hours||parseFloat(form.hours)<=0){setError("เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น");return;}
-    setError("");setLoading(true);
-    try{const id=genId();await onSubmit({...form,id,submittedAt:new Date().toISOString()});setRefId(id);setSuccess(true);setForm(empty);}
+    setError("");setShowPreview(true);
+  };
+  const handleConfirm=async()=>{
+    setLoading(true);
+    try{const id=genId();const rec={...form,id,submittedAt:new Date().toISOString()};await onSubmit(rec);setSubmittedRec(rec);setShowPreview(false);setSuccess(true);setForm(empty);}
     catch(e){setError(e.message);}
     setLoading(false);
   };
   const iStyle={width:"100%",padding:"9px 12px",border:"1.5px solid #D1D5DB",borderRadius:8,fontSize:14,boxSizing:"border-box",fontFamily:"inherit"};
   const lStyle={display:"block",fontSize:13,fontWeight:600,color:"#374151",marginBottom:5};
-  if(success) return <div style={{textAlign:"center",padding:"40px 20px"}}>
+  if(success) return <div style={{textAlign:"center",padding:"30px 20px"}}>
     <div style={{fontSize:56,marginBottom:12}}>✅</div>
     <h2 style={{color:"#065F46",margin:"0 0 8px"}}>ยื่นคำขอ OT สำเร็จ!</h2>
-    <p style={{color:"#6B7280",margin:"0 0 8px"}}>หมายเลขอ้างอิงของคุณ:</p>
-    <div style={{background:"#F0FDF4",border:"2px dashed #10B981",borderRadius:10,padding:"12px 24px",display:"inline-block",fontFamily:"monospace",fontSize:20,fontWeight:700,color:"#065F46",letterSpacing:2}}>{refId}</div>
-    <p style={{color:"#9CA3AF",fontSize:13,marginTop:10}}>บันทึกใน Airtable เรียบร้อยแล้ว</p>
-    <button onClick={()=>setSuccess(false)} style={{marginTop:16,background:"#0F766E",color:"#fff",border:"none",borderRadius:8,padding:"10px 28px",fontSize:15,fontWeight:600,cursor:"pointer"}}>ยื่นคำขอใหม่</button>
+    <p style={{color:"#6B7280",margin:"0 0 8px"}}>หมายเลขอ้างอิง:</p>
+    <div style={{background:"#F0FDF4",border:"2px dashed #10B981",borderRadius:10,padding:"12px 24px",display:"inline-block",fontFamily:"monospace",fontSize:18,fontWeight:700,color:"#065F46",letterSpacing:2,marginBottom:20}}>{submittedRec?.id}</div>
+    <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+      <button onClick={()=>printOTForm(submittedRec)} style={{background:"#1E3A5F",color:"#fff",border:"none",borderRadius:8,padding:"11px 20px",fontSize:14,fontWeight:600,cursor:"pointer"}}>🖨️ พิมพ์ฟอร์ม OT</button>
+      <button onClick={()=>setSuccess(false)} style={{background:"#0F766E",color:"#fff",border:"none",borderRadius:8,padding:"11px 20px",fontSize:14,fontWeight:600,cursor:"pointer"}}>ยื่นคำขอใหม่</button>
+    </div>
   </div>;
   return <div>
+    {showPreview&&<PreviewModal form={form} onConfirm={handleConfirm} onEdit={()=>setShowPreview(false)} loading={loading}/>}
     <h2 style={{margin:"0 0 20px",fontSize:20,color:"#111827",fontWeight:700}}>📋 แบบฟอร์มขอทำ OT</h2>
     {error&&<div style={{background:"#FEE2E2",color:"#991B1B",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:13}}>⚠️ {error}</div>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 14px"}}>
       <div style={{marginBottom:14}}><label style={lStyle}>ชื่อ-นามสกุล <span style={{color:"#EF4444"}}>*</span></label><input style={iStyle} placeholder="เช่น สมชาย ใจดี" value={form.name} onChange={e=>set("name",e.target.value)}/></div>
       <div style={{marginBottom:14}}><label style={lStyle}>รหัสพนักงาน <span style={{color:"#EF4444"}}>*</span></label><input style={iStyle} placeholder="เช่น EMP001" value={form.empId} onChange={e=>set("empId",e.target.value)}/></div>
     </div>
-    <div style={{marginBottom:14}}>
-      <label style={lStyle}>แผนก <span style={{color:"#EF4444"}}>*</span></label>
+    <div style={{marginBottom:14}}><label style={lStyle}>แผนก <span style={{color:"#EF4444"}}>*</span></label>
       <select style={{...iStyle,background:"#fff"}} value={form.department} onChange={e=>set("department",e.target.value)}>
-        <option value="">-- เลือกแผนก --</option>
-        {DEPTS.map(d=><option key={d} value={d}>{d}</option>)}
+        <option value="">-- เลือกแผนก --</option>{DEPTS.map(d=><option key={d} value={d}>{d}</option>)}
       </select>
     </div>
     <div style={{marginBottom:14}}><label style={lStyle}>วันที่ทำ OT <span style={{color:"#EF4444"}}>*</span></label><input type="date" style={iStyle} value={form.otDate} onChange={e=>set("otDate",e.target.value)}/></div>
@@ -134,8 +293,8 @@ function EmployeeForm({onSubmit}) {
       <div style={{marginBottom:14}}><label style={lStyle}>ชั่วโมง OT</label><div style={{...iStyle,background:"#F9FAFB",color:form.hours?"#065F46":"#9CA3AF",fontWeight:form.hours?700:400}}>{form.hours?`${form.hours} ชม.`:"อัตโนมัติ"}</div></div>
     </div>
     <div style={{marginBottom:14}}><label style={lStyle}>เหตุผลการทำ OT <span style={{color:"#EF4444"}}>*</span></label><textarea rows={3} style={{...iStyle,resize:"vertical"}} placeholder="อธิบายเหตุผล..." value={form.reason} onChange={e=>set("reason",e.target.value)}/></div>
-    <button onClick={handleSubmit} disabled={loading} style={{width:"100%",background:loading?"#9CA3AF":"linear-gradient(135deg,#0F766E,#0D9488)",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:16,fontWeight:700,cursor:loading?"not-allowed":"pointer"}}>
-      {loading?"⏳ กำลังบันทึก...":"ส่งคำขอ OT →"}
+    <button onClick={handlePreview} style={{width:"100%",background:"linear-gradient(135deg,#0F766E,#0D9488)",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:16,fontWeight:700,cursor:"pointer"}}>
+      ตรวจสอบและส่งคำขอ OT →
     </button>
   </div>;
 }
@@ -152,8 +311,7 @@ function StatusCheck({records,loading}) {
     {!loading&&t&&results.length===0&&<p style={{color:"#9CA3AF",textAlign:"center",padding:20}}>ไม่พบข้อมูล</p>}
     {results.map(r=><div key={r.airtableId} style={{border:"1.5px solid #E5E7EB",borderRadius:12,overflow:"hidden",marginBottom:12}}>
       <div style={{background:"#F9FAFB",padding:"12px 16px",borderBottom:"1px solid #E5E7EB",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <span style={{fontFamily:"monospace",fontWeight:700,color:"#374151"}}>{r.id}</span>
-        <Badge status={r.status}/>
+        <span style={{fontFamily:"monospace",fontWeight:700,color:"#374151"}}>{r.id}</span><Badge status={r.status}/>
       </div>
       <div style={{padding:"14px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 20px"}}>
         {[["ชื่อ",r.name],["รหัส",r.empId],["แผนก",r.department],["วันที่ OT",fmtDate(r.otDate)],["เวลา",`${r.startTime}-${r.endTime}`],["ชั่วโมง",`${r.hours} ชม.`]].map(([k,v])=>(
@@ -161,6 +319,9 @@ function StatusCheck({records,loading}) {
         ))}
         <div style={{gridColumn:"1/-1"}}><div style={{fontSize:11,color:"#9CA3AF",fontWeight:600}}>เหตุผล</div><div style={{fontSize:14,color:"#374151"}}>{r.reason}</div></div>
         {r.adminNote&&<div style={{gridColumn:"1/-1"}}><div style={{fontSize:11,color:"#9CA3AF",fontWeight:600}}>หมายเหตุ Admin</div><div style={{fontSize:14,color:"#374151",fontStyle:"italic"}}>{r.adminNote}</div></div>}
+      </div>
+      <div style={{padding:"8px 16px",borderTop:"1px solid #E5E7EB",textAlign:"right"}}>
+        <button onClick={()=>printOTForm(r)} style={{background:"#1E3A5F",color:"#fff",border:"none",borderRadius:6,padding:"6px 14px",fontSize:12,fontWeight:600,cursor:"pointer"}}>🖨️ พิมพ์ฟอร์ม OT</button>
       </div>
     </div>)}
   </div>;
@@ -170,18 +331,11 @@ function AdminPanel({records,loading,onUpdate}) {
   const [authed,setAuthed]=useState(false);
   const [pw,setPw]=useState("");const [pwErr,setPwErr]=useState("");
   const [filter,setFilter]=useState("all");
-  const [sel,setSel]=useState(null);
-  const [note,setNote]=useState("");
-  const [upd,setUpd]=useState(false);
+  const [sel,setSel]=useState(null);const [note,setNote]=useState("");const [upd,setUpd]=useState(false);
   const filtered=records.filter(r=>filter==="all"||r.status===filter);
   const sum={pending:records.filter(r=>r.status==="pending").length,approved:records.filter(r=>r.status==="approved").length,rejected:records.filter(r=>r.status==="rejected").length};
   const totalH=records.filter(r=>r.status==="approved").reduce((s,r)=>s+(parseFloat(r.hours)||0),0);
-  const doAction=async(action)=>{
-    setUpd(true);
-    try{await onUpdate(sel.airtableId,action,note);setSel(null);setNote("");}
-    catch(e){alert("เกิดข้อผิดพลาด: "+e.message);}
-    setUpd(false);
-  };
+  const doAction=async(action)=>{setUpd(true);try{await onUpdate(sel.airtableId,action,note);setSel(null);setNote("");}catch(e){alert("เกิดข้อผิดพลาด: "+e.message);}setUpd(false);};
   const dlCSV=()=>{
     const h=["หมายเลขอ้างอิง","ชื่อ-นามสกุล","รหัสพนักงาน","แผนก","วันที่ OT","เวลาเริ่ม","เวลาสิ้นสุด","ชั่วโมง","เหตุผล","สถานะ","หมายเหตุ Admin","วันที่ยื่น"];
     const rows=filtered.map(r=>[r.id,r.name,r.empId,r.department,r.otDate,r.startTime,r.endTime,r.hours,`"${r.reason}"`,SC[r.status]?.label||r.status,r.adminNote||"",fmtDT(r.submittedAt)]);
@@ -191,8 +345,7 @@ function AdminPanel({records,loading,onUpdate}) {
   };
   if(!authed) return <div style={{maxWidth:340,margin:"0 auto",textAlign:"center",paddingTop:20}}>
     <div style={{fontSize:48,marginBottom:8}}>🔐</div>
-    <h2 style={{margin:"0 0 6px",color:"#111827"}}>Admin Login</h2>
-    <p style={{color:"#9CA3AF",fontSize:13,marginBottom:20}}>กรอกรหัสผ่านเพื่อเข้าสู่ระบบ</p>
+    <h2 style={{margin:"0 0 20px",color:"#111827"}}>Admin Login</h2>
     <input type="password" placeholder="รหัสผ่าน" value={pw} onChange={e=>setPw(e.target.value)}
       onKeyDown={e=>e.key==="Enter"&&(pw===ADMIN_PW?(setAuthed(true),setPwErr("")):setPwErr("รหัสผ่านไม่ถูกต้อง"))}
       style={{width:"100%",padding:"11px 14px",border:"1.5px solid #D1D5DB",borderRadius:8,fontSize:15,boxSizing:"border-box",marginBottom:8,fontFamily:"inherit"}}/>
@@ -246,11 +399,14 @@ function AdminPanel({records,loading,onUpdate}) {
         ))}
         <div style={{gridColumn:"1/-1"}}><div style={{fontSize:11,color:"#9CA3AF",fontWeight:600}}>เหตุผล</div><div style={{fontSize:14,color:"#374151"}}>{sel.reason}</div></div>
       </div>
-      <div style={{marginBottom:14}}>
+      <div style={{marginBottom:12}}>
         <label style={{fontSize:13,fontWeight:600,color:"#374151",display:"block",marginBottom:5}}>หมายเหตุ Admin</label>
         <textarea rows={2} value={note} onChange={e=>setNote(e.target.value)} placeholder="ระบุหมายเหตุ..."
           style={{width:"100%",padding:"9px 12px",border:"1.5px solid #D1D5DB",borderRadius:8,fontSize:14,resize:"vertical",fontFamily:"inherit",boxSizing:"border-box"}}/>
       </div>
+      <button onClick={()=>printOTForm(sel)} style={{width:"100%",background:"#1E3A5F",color:"#fff",border:"none",borderRadius:8,padding:"10px",fontSize:14,fontWeight:600,cursor:"pointer",marginBottom:10}}>
+        🖨️ พิมพ์ฟอร์ม OT
+      </button>
       {sel.status==="pending"?<div style={{display:"flex",gap:8}}>
         <button onClick={()=>doAction("approved")} disabled={upd} style={{flex:1,background:upd?"#9CA3AF":"#10B981",color:"#fff",border:"none",borderRadius:8,padding:"11px",fontSize:15,fontWeight:700,cursor:"pointer"}}>{upd?"⏳...":"✅ อนุมัติ"}</button>
         <button onClick={()=>doAction("rejected")} disabled={upd} style={{flex:1,background:upd?"#9CA3AF":"#EF4444",color:"#fff",border:"none",borderRadius:8,padding:"11px",fontSize:15,fontWeight:700,cursor:"pointer"}}>{upd?"⏳...":"❌ ไม่อนุมัติ"}</button>
@@ -279,7 +435,7 @@ function App() {
           <div style={{width:42,height:42,background:"rgba(255,255,255,0.15)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>⏰</div>
           <div>
             <h1 style={{margin:0,color:"#fff",fontSize:20,fontWeight:800,lineHeight:1.2}}>ระบบบันทึก OT</h1>
-            <p style={{margin:0,color:"rgba(255,255,255,0.65)",fontSize:13}}>เชื่อมต่อ Airtable • ทุกเครื่องเห็นข้อมูลเดียวกัน</p>
+            <p style={{margin:0,color:"rgba(255,255,255,0.65)",fontSize:13}}>GKN Driveline • HRM-01-001</p>
           </div>
         </div>
         <div style={{display:"flex",gap:4}}>
@@ -300,7 +456,7 @@ function App() {
         {tab==="status"&&<StatusCheck records={records} loading={loading}/>}
         {tab==="admin"&&<AdminPanel records={records} loading={loading} onUpdate={handleUpdate}/>}
       </div>
-      <p style={{textAlign:"center",color:"#CBD5E1",fontSize:11,marginTop:14}}>💾 ข้อมูลเก็บใน Airtable • Real-time</p>
+      <p style={{textAlign:"center",color:"#CBD5E1",fontSize:11,marginTop:14}}>💾 GKN Driveline OT System • Powered by Airtable</p>
     </div>
   </div>;
 }
