@@ -47,7 +47,7 @@ const fmtDT = iso => { if(!iso) return "-"; const d=new Date(iso); return d.toLo
 const today = () => new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
 
 async function fetchRecs() {
-  const r = await fetch(`${API_URL}?sort[0][field]=submittedAt&sort[0][direction]=desc`,{headers:HEADS});
+  const r = await fetch(`${API_URL}?sort[0][field]=refId&sort[0][direction]=desc`,{headers:HEADS});
   const d = await r.json();
   if(!r.ok) throw new Error(d.error?.message||"โหลดไม่สำเร็จ"); 
 return d.records.map(r=>({airtableId:r.id,...r.fields,id:r.fields.refId||r.id}));
